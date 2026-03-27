@@ -1,0 +1,3 @@
+export const INTERVIEW_SLOT_DURATION_MINUTES = 45;
+export const DEFAULT_HELD_SLOT_COUNT = 3;
+export const MAX_HELD_SLOT_COUNT = 5;
