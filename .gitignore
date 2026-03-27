@@ -1,0 +1,9 @@
+.next
+node_modules
+dist
+.turbo
+.env
+.env.local
+coverage
+apps/web/generated
+apps/web/public/uploads
