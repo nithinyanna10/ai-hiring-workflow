@@ -1,0 +1,288 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum JobStatus {
+  DRAFT
+  OPEN
+  PAUSED
+  CLOSED
+  FILLED
+  ARCHIVED
+}
+
+enum ApplicationStatus {
+  APPLIED
+  SCREENED
+  SHORTLISTED
+  UNDER_REVIEW
+  PHONE_SCREEN
+  INTERVIEW_SCHEDULED
+  INTERVIEWING
+  OFFER_DRAFT
+  OFFER_SENT
+  OFFER_SIGNED
+  HIRED
+  REJECTED
+  WITHDRAWN
+  ONBOARDING
+}
+
+enum ActorType {
+  SYSTEM
+  CANDIDATE
+  RECRUITER
+  HIRING_MANAGER
+  INTERVIEWER
+  ADMIN
+  AI_AGENT
+}
+
+enum SlotStatus {
+  OPEN
+  HELD
+  CONFIRMED
+  RELEASED
+  BOOKED
+  BLOCKED
+  CANCELED
+  EXPIRED
+}
+
+enum SignatureStatus {
+  DRAFT
+  PENDING
+  SENT
+  VIEWED
+  SIGNED
+  DECLINED
+  EXPIRED
+  VOIDED
+}
+
+model Job {
+  id                String        @id @default(cuid())
+  title             String        @db.VarChar(160)
+  slug              String        @unique @db.VarChar(180)
+  team              String        @db.VarChar(120)
+  location          String        @db.VarChar(120)
+  workModel         String        @db.VarChar(80)
+  level             String        @db.VarChar(80)
+  description       String
+  responsibilities  String[]
+  requirements      String[]
+  status            JobStatus     @default(DRAFT)
+  openedAt          DateTime?     @db.Timestamptz(6)
+  closedAt          DateTime?     @db.Timestamptz(6)
+  createdAt         DateTime      @default(now()) @db.Timestamptz(6)
+  updatedAt         DateTime      @updatedAt @db.Timestamptz(6)
+  applications      Application[]
+  interviewSlots    InterviewSlot[]
+  activityEvents    ActivityEvent[]
+
+  @@index([status, createdAt(sort: Desc)])
+  @@index([team, status])
+  @@index([location, status])
+  @@index([workModel, status])
+}
+
+model Candidate {
+  id                   String                  @id @default(cuid())
+  email                String                  @db.VarChar(320)
+  emailNormalized      String                  @unique @db.VarChar(320)
+  firstName            String                  @db.VarChar(120)
+  lastName             String                  @db.VarChar(120)
+  phone                String?                 @db.VarChar(40)
+  linkedinUrl          String?                 @db.VarChar(500)
+  portfolioUrl         String?                 @db.VarChar(500)
+  createdAt            DateTime                @default(now()) @db.Timestamptz(6)
+  updatedAt            DateTime                @updatedAt @db.Timestamptz(6)
+  applications         Application[]
+  activityEvents       ActivityEvent[]
+  candidateStatusLogs  CandidateStatusHistory[]
+
+  @@index([lastName, firstName])
+  @@index([email])
+}
+
+model Application {
+  id                    String                   @id @default(cuid())
+  candidateId           String
+  jobId                 String
+  schedulingAccessToken String?                  @unique @db.VarChar(120)
+  resumeFileUrl         String                   @db.VarChar(1000)
+  parsedResumeJson      Json?
+  aiScreenScore         Decimal?                 @db.Decimal(5, 2)
+  aiScreenSummary       String?
+  aiStrengthsJson       Json?
+  aiGapsJson            Json?
+  researchSummary       String?
+  discrepancyFlagsJson  Json?
+  currentStatus         ApplicationStatus        @default(APPLIED)
+  submittedAt           DateTime                 @default(now()) @db.Timestamptz(6)
+  reviewedAt            DateTime?                @db.Timestamptz(6)
+  createdAt             DateTime                 @default(now()) @db.Timestamptz(6)
+  updatedAt             DateTime                 @updatedAt @db.Timestamptz(6)
+  candidate             Candidate                @relation(fields: [candidateId], references: [id], onDelete: Restrict)
+  job                   Job                      @relation(fields: [jobId], references: [id], onDelete: Restrict)
+  statusHistory         CandidateStatusHistory[]
+  activityEvents        ActivityEvent[]
+  researchProfile       ApplicationResearch?
+  interviewSlots        InterviewSlot[]
+  interviews            Interview[]
+  offer                 Offer?
+  onboardingEvents      OnboardingEvent[]
+
+  @@unique([candidateId, jobId])
+  @@index([jobId, currentStatus, submittedAt(sort: Desc)])
+  @@index([candidateId, submittedAt(sort: Desc)])
+  @@index([currentStatus, submittedAt(sort: Desc)])
+}
+
+model ApplicationResearch {
+  id                     String       @id @default(cuid())
+  applicationId          String       @unique
+  shortCandidateBrief    String
+  likelyStrengthsJson    Json
+  notableProjectsJson    Json
+  discrepancyFlagsJson   Json
+  interviewerPrepNotes   String
+  sourceLinksJson        Json?
+  createdAt              DateTime     @default(now()) @db.Timestamptz(6)
+  updatedAt              DateTime     @updatedAt @db.Timestamptz(6)
+  application            Application  @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+}
+
+model CandidateStatusHistory {
+  id             String            @id @default(cuid())
+  applicationId  String
+  candidateId    String
+  fromStatus     ApplicationStatus?
+  toStatus       ApplicationStatus
+  actorType      ActorType
+  note           String?
+  createdAt      DateTime          @default(now()) @db.Timestamptz(6)
+  updatedAt      DateTime          @updatedAt @db.Timestamptz(6)
+  application    Application       @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  candidate      Candidate         @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+
+  @@index([applicationId, createdAt(sort: Desc)])
+  @@index([candidateId, createdAt(sort: Desc)])
+  @@index([toStatus, createdAt(sort: Desc)])
+}
+
+model ActivityEvent {
+  id             String       @id @default(cuid())
+  applicationId  String?
+  candidateId    String?
+  jobId          String?
+  actorType      ActorType
+  eventType      String       @db.VarChar(100)
+  note           String?
+  payloadJson    Json?
+  createdAt      DateTime     @default(now()) @db.Timestamptz(6)
+  updatedAt      DateTime     @updatedAt @db.Timestamptz(6)
+  application    Application? @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  candidate      Candidate?   @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  job            Job?         @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([applicationId, createdAt(sort: Desc)])
+  @@index([candidateId, createdAt(sort: Desc)])
+  @@index([jobId, createdAt(sort: Desc)])
+  @@index([actorType, createdAt(sort: Desc)])
+  @@index([eventType, createdAt(sort: Desc)])
+}
+
+model InterviewSlot {
+  id                String       @id @default(cuid())
+  applicationId     String?
+  jobId             String?
+  startTime         DateTime     @db.Timestamptz(6)
+  endTime           DateTime     @db.Timestamptz(6)
+  slotStatus        SlotStatus   @default(OPEN)
+  holdExpiresAt     DateTime?    @db.Timestamptz(6)
+  reservationToken  String?      @unique @db.VarChar(120)
+  lockVersion       Int          @default(0)
+  timezone          String?      @db.VarChar(80)
+  interviewerName   String?      @db.VarChar(160)
+  meetingLocation   String?      @db.VarChar(500)
+  createdAt         DateTime     @default(now()) @db.Timestamptz(6)
+  updatedAt         DateTime     @updatedAt @db.Timestamptz(6)
+  application       Application? @relation(fields: [applicationId], references: [id], onDelete: SetNull)
+  job               Job?         @relation(fields: [jobId], references: [id], onDelete: SetNull)
+  interview         Interview?
+
+  @@index([applicationId, slotStatus, startTime])
+  @@index([jobId, startTime])
+  @@index([slotStatus, startTime])
+  @@index([holdExpiresAt])
+  @@index([startTime, endTime])
+}
+
+model Interview {
+  id                String         @id @default(cuid())
+  applicationId     String
+  interviewSlotId   String         @unique
+  interviewType     String         @db.VarChar(80)
+  interviewerName   String?        @db.VarChar(160)
+  interviewerEmail  String?        @db.VarChar(320)
+  meetingUrl        String?        @db.VarChar(1000)
+  feedbackSummary   String?
+  completedAt       DateTime?      @db.Timestamptz(6)
+  createdAt         DateTime       @default(now()) @db.Timestamptz(6)
+  updatedAt         DateTime       @updatedAt @db.Timestamptz(6)
+  application       Application    @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  interviewSlot     InterviewSlot  @relation(fields: [interviewSlotId], references: [id], onDelete: Restrict)
+
+  @@index([applicationId, createdAt(sort: Desc)])
+  @@index([completedAt])
+}
+
+model Offer {
+  id                 String           @id @default(cuid())
+  applicationId      String           @unique
+  signatureToken     String?          @unique @db.VarChar(120)
+  title              String           @db.VarChar(160)
+  baseSalary         Decimal?         @db.Decimal(12, 2)
+  equity             Decimal?         @db.Decimal(12, 4)
+  bonus              Decimal?         @db.Decimal(12, 2)
+  managerName        String?          @db.VarChar(160)
+  startDate          DateTime?        @db.Date
+  customTerms        String?
+  offerText          String?
+  pdfUrl             String?          @db.VarChar(1000)
+  signatureProvider  String?          @db.VarChar(80)
+  signatureStatus    SignatureStatus  @default(DRAFT)
+  signedAt           DateTime?        @db.Timestamptz(6)
+  signerIp           String?          @db.VarChar(64)
+  createdAt          DateTime         @default(now()) @db.Timestamptz(6)
+  updatedAt          DateTime         @updatedAt @db.Timestamptz(6)
+  application        Application      @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([signatureStatus, createdAt(sort: Desc)])
+  @@index([startDate])
+}
+
+model OnboardingEvent {
+  id              String        @id @default(cuid())
+  applicationId   String
+  eventType       String        @db.VarChar(100)
+  title           String        @db.VarChar(160)
+  description     String?
+  payloadJson     Json?
+  dueAt           DateTime?     @db.Timestamptz(6)
+  completedAt     DateTime?     @db.Timestamptz(6)
+  createdAt       DateTime      @default(now()) @db.Timestamptz(6)
+  updatedAt       DateTime      @updatedAt @db.Timestamptz(6)
+  application     Application   @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([applicationId, createdAt(sort: Desc)])
+  @@index([dueAt])
+  @@index([completedAt])
+}
