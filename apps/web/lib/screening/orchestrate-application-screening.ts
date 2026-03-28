@@ -7,6 +7,8 @@ import {
 } from "@hiring-workflow/ai-engine";
 
 import { db } from "../db";
+import { sendScreeningNotificationEmail } from "../email/send-screening-notification";
+import { getEmailProvider } from "../email/provider";
 import { orchestrateCandidateResearch } from "../research/orchestrate-candidate-research";
 import { extractResumeText } from "../resume-extraction";
 import { env } from "../env";
@@ -42,6 +44,11 @@ type ScreeningApplicationRecord = {
   aiStrengthsJson: Prisma.JsonValue | null;
   aiGapsJson: Prisma.JsonValue | null;
   currentStatus: ApplicationStatus;
+  candidate: {
+    email: string;
+    firstName: string;
+    lastName: string;
+  };
   job: {
     id: string;
     title: string;
@@ -112,6 +119,13 @@ async function fetchApplication(applicationId: string) {
       aiStrengthsJson: true,
       aiGapsJson: true,
       currentStatus: true,
+      candidate: {
+        select: {
+          email: true,
+          firstName: true,
+          lastName: true,
+        },
+      },
       job: {
         select: {
           id: true,
@@ -296,6 +310,51 @@ export async function orchestrateApplicationScreening({
       screeningResult,
       scoreThreshold,
     );
+
+    try {
+      const candidateName =
+        `${application.candidate.firstName} ${application.candidate.lastName}`.trim();
+      const emailResult = await sendScreeningNotificationEmail({
+        candidateEmail: application.candidate.email,
+        candidateName,
+        roleTitle: application.job.title,
+        score: screeningResult.score,
+        threshold: scoreThreshold,
+        shortlisted: finalStatus === ApplicationStatus.SHORTLISTED,
+      });
+
+      await db.activityEvent.create({
+        data: {
+          applicationId: application.id,
+          candidateId: application.candidateId,
+          jobId: application.job.id,
+          actorType: ActorType.SYSTEM,
+          eventType: "application.screening_notification_email_sent",
+          note: `Screening summary email sent to ${application.candidate.email}.`,
+          payloadJson: {
+            provider: emailResult.provider,
+            messageId: emailResult.messageId ?? null,
+          },
+        },
+      });
+    } catch (error) {
+      const failureMessage =
+        error instanceof Error ? error.message : "Unknown screening email failure.";
+      await db.activityEvent.create({
+        data: {
+          applicationId: application.id,
+          candidateId: application.candidateId,
+          jobId: application.job.id,
+          actorType: ActorType.SYSTEM,
+          eventType: "application.screening_notification_email_failed",
+          note: `Screening summary email failed for ${application.candidate.email}.`,
+          payloadJson: {
+            provider: getEmailProvider().name,
+            error: failureMessage,
+          },
+        },
+      });
+    }
 
     if (finalStatus === ApplicationStatus.SHORTLISTED) {
       await orchestrateCandidateResearch({
