@@ -1,8 +1,8 @@
-import { ClaudeClient, OpenAIClient } from "@hiring-workflow/ai-engine";
+import { OpenAIClient } from "@hiring-workflow/ai-engine";
 
 import { env } from "../env";
 
-export function getResumeParsingProvider() {
+function getOpenAiStructuredProvider() {
   if (!env.OPENAI_API_KEY) {
     throw new Error("OPENAI_API_KEY is not configured.");
   }
@@ -13,13 +13,12 @@ export function getResumeParsingProvider() {
   });
 }
 
-export function getResumeScreeningProvider() {
-  if (!env.CLAUDE_API_KEY) {
-    throw new Error("CLAUDE_API_KEY is not configured.");
-  }
+/** Structured resume extraction (JSON schema). */
+export function getResumeParsingProvider() {
+  return getOpenAiStructuredProvider();
+}
 
-  return new ClaudeClient({
-    apiKey: env.CLAUDE_API_KEY,
-    model: env.CLAUDE_MODEL,
-  });
+/** Resume screening, candidate research, and other structured evaluations. */
+export function getResumeScreeningProvider() {
+  return getOpenAiStructuredProvider();
 }
