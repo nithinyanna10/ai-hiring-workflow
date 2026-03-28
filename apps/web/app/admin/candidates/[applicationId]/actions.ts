@@ -6,7 +6,9 @@ import {
   applyAdminStatusOverride,
   type AdminOverrideState,
 } from "../../../../lib/admin/candidate-detail";
+import { sendRecruiterEmailToCandidate } from "../../../../lib/admin/recruiter-candidate-email";
 import { completeSlackOnboardingWelcome } from "../../../../lib/onboarding/complete-slack-welcome";
+import type { RecruiterEmailFormState } from "../../../../components/admin/candidate-detail/recruiter-email-form";
 import type { SlackOnboardingSimulateState } from "../../../../components/admin/candidate-detail/slack-onboarding-form";
 
 function getStringValue(value: FormDataEntryValue | null) {
@@ -68,4 +70,28 @@ export async function simulateSlackJoinOnboardingAction(
   }
 
   return { successMessage: "Slack welcome, HR notification, and ONBOARDED status completed." };
+}
+
+export async function sendRecruiterEmailAction(
+  _previousState: RecruiterEmailFormState,
+  formData: FormData,
+): Promise<RecruiterEmailFormState> {
+  const applicationId = getStringValue(formData.get("applicationId"));
+  const subject = getStringValue(formData.get("subject"));
+  const body = getStringValue(formData.get("body"));
+
+  const result = await sendRecruiterEmailToCandidate({
+    applicationId,
+    subject,
+    body,
+  });
+
+  revalidatePath(`/admin/candidates/${applicationId}`);
+  revalidatePath("/admin/candidates");
+
+  if (!result.ok) {
+    return { errorMessage: result.errorMessage };
+  }
+
+  return { successMessage: "Email sent to the candidate." };
 }
