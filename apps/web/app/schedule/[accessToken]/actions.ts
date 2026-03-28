@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 
-import { confirmSlot } from "../../../../lib/interview-scheduling";
+import { confirmSlot } from "../../../lib/interview-scheduling";
 
 type CandidateScheduleActionState = {
   errorMessage?: string;
