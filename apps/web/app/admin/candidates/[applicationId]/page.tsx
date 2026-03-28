@@ -9,8 +9,13 @@ import { DetailGridItem } from "../../../../components/admin/candidate-detail/de
 import { ParsedResumeSummary } from "../../../../components/admin/candidate-detail/parsed-resume-summary";
 import { StringList } from "../../../../components/admin/candidate-detail/string-list";
 import { getAdminCandidateDetail } from "../../../../lib/admin/candidate-detail";
+import { RecruiterEmailForm } from "../../../../components/admin/candidate-detail/recruiter-email-form";
 import { SlackOnboardingForm } from "../../../../components/admin/candidate-detail/slack-onboarding-form";
-import { applyAdminOverrideAction, simulateSlackJoinOnboardingAction } from "./actions";
+import {
+  applyAdminOverrideAction,
+  sendRecruiterEmailAction,
+  simulateSlackJoinOnboardingAction,
+} from "./actions";
 import type { RouteParams } from "../../../../types";
 
 function formatDateTime(value: Date | null) {
@@ -217,6 +222,20 @@ export default async function AdminCandidateDetailPage({
               applicationId={detail.applicationId}
               action={applyAdminOverrideAction}
             />
+            <div className="rounded-lg border border-border bg-white p-6">
+              <h2 className="text-lg font-semibold tracking-tight">Email candidate</h2>
+              <p className="mt-2 text-sm leading-6 text-slate-600">
+                Send a manual message regardless of automated screening score (e.g. follow-up or
+                encouragement).
+              </p>
+              <div className="mt-4">
+                <RecruiterEmailForm
+                  applicationId={detail.applicationId}
+                  candidateEmail={detail.candidate.email}
+                  action={sendRecruiterEmailAction}
+                />
+              </div>
+            </div>
             <div className="rounded-lg border border-border bg-white p-6">
               <h2 className="text-lg font-semibold tracking-tight">Scheduling</h2>
               <p className="mt-2 text-sm leading-6 text-slate-600">
