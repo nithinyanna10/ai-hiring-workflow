@@ -32,6 +32,7 @@ enum ApplicationStatus {
   REJECTED
   WITHDRAWN
   ONBOARDING
+  ONBOARDED
 }
 
 enum ActorType {
