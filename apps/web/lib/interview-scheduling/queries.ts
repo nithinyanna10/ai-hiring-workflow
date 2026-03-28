@@ -121,9 +121,11 @@ export async function getCandidateSchedulingDetail(accessToken: string) {
   });
 }
 
+const SCHEDULING_ELIGIBLE_STATUSES: ApplicationStatus[] = [
+  ApplicationStatus.SHORTLISTED,
+  ApplicationStatus.INTERVIEW_SCHEDULED,
+];
+
 export function canGenerateSchedulingOffers(status: ApplicationStatus) {
-  return [
-    ApplicationStatus.SHORTLISTED,
-    ApplicationStatus.INTERVIEW_SCHEDULED,
-  ].includes(status);
+  return SCHEDULING_ELIGIBLE_STATUSES.includes(status);
 }
