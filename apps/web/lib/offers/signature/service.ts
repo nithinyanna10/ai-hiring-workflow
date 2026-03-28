@@ -1,6 +1,8 @@
 import { ActorType, ApplicationStatus, SignatureStatus } from "@prisma/client";
 
 import { db } from "../../db";
+import { ONBOARDING_ACTIVITY } from "../../onboarding/constants";
+import { orchestrateSlackWorkspaceInviteAfterOfferSigned } from "../../onboarding/orchestrate-slack-invite";
 import type { OfferSignatureProvider } from "./provider";
 import { MockOfferSignatureProvider } from "./providers/mock-offer-signature-provider";
 import type { OfferReviewDetail } from "./types";
@@ -233,6 +235,23 @@ export async function completeOfferSignature(
       },
     });
   });
+
+  try {
+    await orchestrateSlackWorkspaceInviteAfterOfferSigned(offer.applicationId);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "unknown_error";
+    await db.activityEvent.create({
+      data: {
+        applicationId: offer.applicationId,
+        candidateId: offer.application.candidateId,
+        jobId: offer.application.jobId,
+        actorType: ActorType.SYSTEM,
+        eventType: ONBOARDING_ACTIVITY.SLACK_INVITE_HOOK_EXCEPTION,
+        note: "Unexpected error while starting Slack onboarding invite after offer signature.",
+        payloadJson: { message },
+      },
+    });
+  }
 
   return {
     ok: true as const,
