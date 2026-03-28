@@ -2,7 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { ApplicationForm } from "../../../../components/public/apply/application-form";
-import { defaultApplicationState, submitApplicationAction } from "./actions";
+import { defaultApplicationState } from "../../../../lib/applications/types";
+import { submitApplicationAction } from "./actions";
 import { getJobBySlug, getOpenJobOptions } from "../../../../lib/db";
 import { JobStatus } from "@prisma/client";
 import type { RouteParams } from "../../../../types";
