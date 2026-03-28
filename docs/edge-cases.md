@@ -18,7 +18,7 @@ How important boundary conditions are handled in the current design.
 
 8. **Uncaught exception in post-signature invite hook** — Wrapped in `try/catch`; signing transaction is never rolled back. `onboarding.slack_invite_hook_exception` records the failure for investigation.
 
-9. **No `CLAUDE_API_KEY` for welcome copy** — `resolveOnboardingWelcomeMessage` falls back to a deterministic template so onboarding can still complete in dev/CI.
+9. **No `OPENAI_API_KEY` for welcome copy** — `resolveOnboardingWelcomeMessage` falls back to a deterministic template so onboarding can still complete in dev/CI.
 
 10. **`SLACK_PROVIDER=slack_api` without `SLACK_BOT_TOKEN`** — Factory throws; invite orchestration catches provider initialization errors and logs `onboarding.slack_invite_failed` with a clear message.
 
