@@ -42,7 +42,7 @@ async function createSchedulingEvent(
       actorType: ActorType.SYSTEM,
       eventType: input.eventType,
       note: input.note,
-      payloadJson: input.payloadJson,
+      payloadJson: input.payloadJson as Prisma.InputJsonValue | undefined,
     },
   });
 }
