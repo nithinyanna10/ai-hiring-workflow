@@ -17,8 +17,14 @@ Production-style monorepo scaffold for an AI-powered hiring workflow application
 pnpm install
 cp .env.example .env
 pnpm prisma:generate
+pnpm --filter web exec prisma db push   # or migrate deploy
+pnpm db:seed                            # upserts open roles from lib/db/job-seed-data.ts
 pnpm dev
 ```
+
+Re-run **`pnpm db:seed`** after adding or editing jobs in `apps/web/lib/db/job-seed-data.ts` so the careers page shows them.
+
+The web dev server listens on **http://localhost:4730** (not 3000) so it stays clear of common localhost conflicts; keep `NEXT_PUBLIC_APP_URL` in `.env` in sync.
 
 The Prisma datasource is configured for PostgreSQL and is ready to point at Supabase.
 
