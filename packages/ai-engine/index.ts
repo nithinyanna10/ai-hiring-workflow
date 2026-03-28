@@ -13,3 +13,6 @@ export * from "./evaluators/candidate-research";
 export * from "./evaluators/candidate-research-schema";
 export * from "./evaluators/resume-screening";
 export * from "./evaluators/screening-schema";
+export * from "./prompts/onboarding-welcome";
+export * from "./evaluators/onboarding-welcome-schema";
+export * from "./evaluators/onboarding-welcome";
