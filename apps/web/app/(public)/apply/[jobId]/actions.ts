@@ -7,8 +7,6 @@ import { maxResumeFileSizeBytes } from "../../../../lib/applications/constants";
 import { submitApplication } from "../../../../lib/applications/submit-application";
 import type { ApplicationActionState } from "../../../../lib/applications/types";
 
-const defaultApplicationState: ApplicationActionState = {};
-
 function getStringValue(value: FormDataEntryValue | null) {
   return typeof value === "string" ? value : "";
 }
@@ -70,5 +68,3 @@ export async function submitApplicationAction(
     `/apply/${parsed.data.jobSlug}/success?email=${encodeURIComponent(parsed.data.email.trim())}`,
   );
 }
-
-export { defaultApplicationState };
