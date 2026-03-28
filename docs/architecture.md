@@ -24,7 +24,7 @@ Invite delivery and welcome delivery are **separate services** so operators can 
 |--------|---------|
 | Offer signature | `OfferSignatureProvider` + mock implementation |
 | Slack | `SlackProvider` in shared; **`MockSlackProvider`** (no network) vs **`SlackApiProvider`** (real `fetch` to Slack Web API) selected by `SLACK_PROVIDER` |
-| Resume AI | OpenAI / Claude clients behind `AIProvider` |
+| Resume AI | `OpenAIClient` behind `AIProvider` (structured JSON / Responses API) |
 
 Provider factories read **environment** in the web app and return a concrete class. This keeps orchestration **testable** and avoids scattering `fetch` calls and env access across business logic.
 
