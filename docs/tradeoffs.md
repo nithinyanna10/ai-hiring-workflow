@@ -14,11 +14,11 @@ Deliberate shortcuts and mocked integrations in this codebase, and why they exis
 
 **Why:** Workspace invites and member IDs vary by Slack product edition. A channel post is a **portable stub** that proves API wiring; swapping in `conversations.open` + DM is a scoped follow-up.
 
-## 3. Template fallback when Claude is unavailable
+## 3. Template fallback when OpenAI is unavailable
 
-**What:** If `CLAUDE_API_KEY` is unset, onboarding welcome copy uses `buildTemplateOnboardingWelcome` instead of the structured Claude evaluator.
+**What:** If `OPENAI_API_KEY` is unset, onboarding welcome copy uses `buildTemplateOnboardingWelcome` instead of the structured OpenAI evaluator.
 
-**Why:** Keeps **demo and CI** paths green without secrets. Product teams still get AI-quality copy when keys are configured; the activity log records `source: "template"` vs `"claude"` for transparency.
+**Why:** Keeps **demo and CI** paths green without secrets. Product teams still get AI-quality copy when keys are configured; the activity log records `source: "template"` vs `"openai"` for transparency.
 
 ## 4. Admin “simulate Slack join” instead of a live membership webhook
 
