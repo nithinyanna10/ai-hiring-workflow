@@ -1,5 +1,4 @@
 export * from "./clients/ai-provider";
-export * from "./clients/claude-client";
 export * from "./clients/openai-client";
 export * from "./prompts/offer-generation";
 export * from "./prompts/resume-parsing";
