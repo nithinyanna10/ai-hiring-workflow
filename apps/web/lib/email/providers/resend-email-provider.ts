@@ -9,9 +9,8 @@ export class ResendEmailProvider implements EmailProvider {
       throw new Error("RESEND_API_KEY is not configured.");
     }
 
-    if (!env.EMAIL_FROM) {
-      throw new Error("EMAIL_FROM is not configured.");
-    }
+    // Resend allows this sender for testing without a verified domain.
+    const from = env.EMAIL_FROM ?? "onboarding@resend.dev";
 
     const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -20,7 +19,7 @@ export class ResendEmailProvider implements EmailProvider {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: env.EMAIL_FROM,
+        from,
         to: [input.to],
         subject: input.subject,
         text: input.text,
