@@ -1,6 +1,6 @@
 import { SignatureStatus } from "@prisma/client";
 
-import { env } from "../../env";
+import { env } from "../../../env";
 import type { OfferSignatureProvider } from "../provider";
 import type {
   OfferSignatureCompletionInput,
