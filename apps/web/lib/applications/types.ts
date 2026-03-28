@@ -16,3 +16,6 @@ export type ApplicationActionState = {
   errorMessage?: string;
   fieldErrors?: ApplicationFieldErrors;
 };
+
+/** Initial `useActionState` value; lives outside `"use server"` files (Next.js export rules). */
+export const defaultApplicationState: ApplicationActionState = {};
