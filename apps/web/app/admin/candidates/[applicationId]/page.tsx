@@ -9,7 +9,8 @@ import { DetailGridItem } from "../../../../components/admin/candidate-detail/de
 import { ParsedResumeSummary } from "../../../../components/admin/candidate-detail/parsed-resume-summary";
 import { StringList } from "../../../../components/admin/candidate-detail/string-list";
 import { getAdminCandidateDetail } from "../../../../lib/admin/candidate-detail";
-import { applyAdminOverrideAction } from "./actions";
+import { SlackOnboardingForm } from "../../../../components/admin/candidate-detail/slack-onboarding-form";
+import { applyAdminOverrideAction, simulateSlackJoinOnboardingAction } from "./actions";
 import type { RouteParams } from "../../../../types";
 
 function formatDateTime(value: Date | null) {
@@ -240,6 +241,23 @@ export default async function AdminCandidateDetailPage({
                 Generate offer
               </Link>
             </div>
+            {detail.currentStatus === "ONBOARDING" ? (
+              <div className="rounded-lg border border-border bg-white p-6">
+                <h2 className="text-lg font-semibold tracking-tight">Slack onboarding</h2>
+                <p className="mt-2 text-sm leading-6 text-slate-600">
+                  After the candidate joins the workspace (or in demo environments), run the welcome
+                  phase: AI-generated message, HR Slack notification, and status{" "}
+                  <span className="font-medium">ONBOARDED</span>. Invite delivery is separate and
+                  already ran when the offer was signed.
+                </p>
+                <div className="mt-4">
+                  <SlackOnboardingForm
+                    applicationId={detail.applicationId}
+                    action={simulateSlackJoinOnboardingAction}
+                  />
+                </div>
+              </div>
+            ) : null}
           </div>
         </div>
       </div>
