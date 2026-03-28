@@ -17,6 +17,7 @@ const badgeClasses: Record<string, string> = {
   REJECTED: "border-rose-200 bg-rose-50 text-rose-700",
   WITHDRAWN: "border-slate-300 bg-slate-100 text-slate-700",
   ONBOARDING: "border-teal-200 bg-teal-50 text-teal-700",
+  ONBOARDED: "border-green-200 bg-green-50 text-green-800",
 };
 
 function formatStatusLabel(status: string) {
