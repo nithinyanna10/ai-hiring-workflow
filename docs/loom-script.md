@@ -23,8 +23,8 @@ On the candidate admin page with status **ONBOARDING**, show the **Slack onboard
 Return to `docs/edge-cases.md` or explain verbally: invite failure leaves **OFFER_SIGNED**; welcome failure leaves **ONBOARDING**; retries are independent. This is why the architecture separates the two modules.
 
 **14:00–15:00 — Closing**  
-Summarize: **Next.js + Prisma** for product velocity, **provider interfaces** for Slack and e-sign, **Claude** for welcome copy when configured. Invite viewers to read `docs/tradeoffs.md` for mocks vs production Slack.
+Summarize: **Next.js + Prisma** for product velocity, **provider interfaces** for Slack and e-sign, **OpenAI** for resume, research, offers, and welcome copy when configured. Invite viewers to read `docs/tradeoffs.md` for mocks vs production Slack.
 
 ---
 
-**Tips:** Keep a terminal tab with `pnpm dev` visible; optionally show `docs/ai-prompts.md` when mentioning OpenAI vs Claude.
+**Tips:** Keep a terminal tab with `pnpm dev` visible; optionally show `docs/ai-prompts.md` for the full OpenAI surface area.
