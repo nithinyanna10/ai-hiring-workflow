@@ -38,11 +38,15 @@ async function tryExtractDocxText(absoluteFilePath: string) {
 }
 
 async function tryExtractPdfText(absoluteFilePath: string) {
-  const pdfModule = await importOptionalModule<{ default?: PdfParse } & PdfParse>("pdf-parse");
-  const pdfParse =
+  const pdfModule = (await importOptionalModule<{ default?: PdfParse } & PdfParse>(
+    "pdf-parse",
+  )) as ({ default?: PdfParse } & Partial<PdfParse>) | PdfParse | null;
+  const pdfParse: PdfParse | null =
     typeof pdfModule === "function"
-      ? pdfModule
-      : pdfModule?.default ?? null;
+      ? (pdfModule as PdfParse)
+      : typeof pdfModule === "object" && pdfModule && "default" in pdfModule
+        ? pdfModule.default ?? null
+        : null;
   if (!pdfParse) {
     return null;
   }
