@@ -1,21 +1,18 @@
-# AI prompts (where OpenAI vs Claude)
+# AI prompts (OpenAI)
 
-## OpenAI (`OpenAIClient` / Responses API)
+All structured LLM calls use **`OpenAIClient`** with the **Responses API** (`generateStructuredObject`) and JSON schema outputs.
 
-- **Resume parsing** — Structured extraction from resume text into `StructuredResume` (`parseResumeWithAI`, prompts under `prompts/resume-parsing.ts`).
-- **Rationale:** Parsing is a **high-structure, format-heavy** task; the scaffold standardizes on OpenAI’s JSON schema style for this step (see `apps/web` screening providers).
+## What runs on OpenAI
 
-## Claude (`ClaudeClient` / Messages API)
-
-- **Resume screening** — Scoring and narrative fit vs job description (`prompts/resume-screening.ts`, `screenResumeWithAI`).
-- **Candidate research** — Synthesis from resume + supplied links (no live scraping).
-- **Offer generation** — Structured offer drafting helpers.
+- **Resume parsing** — Extract `StructuredResume` from text (`prompts/resume-parsing.ts`, `parseResumeWithAI`).
+- **Resume screening** — Score and narrative fit vs job (`prompts/resume-screening.ts`, `screenResumeWithAI`).
+- **Candidate research** — Synthesis from resume + supplied links (`getResumeScreeningProvider()` supplies the same client).
+- **Offer drafting** — Structured offer generation (`offers/service.ts` uses `OpenAIClient` directly).
 - **Onboarding welcome** — Short personalized Slack welcome (`prompts/onboarding-welcome.ts`, `generateOnboardingWelcomeWithAI`).
-- **Rationale:** Screening and prose-heavy evaluations benefit from Claude in this project’s default wiring; onboarding welcome follows the same client for **consistent recruiter-facing tone** when keys are present.
 
-## When keys are missing
+## Configuration
 
-- Screening paths typically **require** configured keys for their flows.
-- Onboarding welcome **degrades** to a template message if `CLAUDE_API_KEY` is absent, so Slack onboarding can still be demonstrated end-to-end.
+- Set **`OPENAI_API_KEY`** for any of the above. **`OPENAI_MODEL`** is optional (see `apps/web/lib/env.ts` defaults in `.env.example`).
+- Onboarding welcome **degrades** to a template message if `OPENAI_API_KEY` is absent, so Slack onboarding can still be demonstrated end-to-end.
 
-See `apps/web/lib/screening/providers.ts` and `apps/web/lib/onboarding/resolve-welcome-message.ts` for the live wiring.
+See `apps/web/lib/screening/providers.ts` and `apps/web/lib/onboarding/resolve-welcome-message.ts` for wiring.
