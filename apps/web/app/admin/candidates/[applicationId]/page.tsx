@@ -1,6 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ApplicationStatus } from "@prisma/client";
 
+import { ActivityTimeline } from "../../../../components/admin/candidate-detail/activity-timeline";
+import { AutomationCallout } from "../../../../components/admin/candidate-detail/automation-callout";
+import { NextBestActionCard } from "../../../../components/admin/candidate-detail/next-best-action-card";
+import { SchedulingOfferSummary } from "../../../../components/admin/candidate-detail/scheduling-offer-summary";
+import { WorkflowPipeline } from "../../../../components/admin/candidate-detail/workflow-pipeline";
 import { StatusBadge } from "../../../../components/admin/candidates/status-badge";
 import { CandidateDetailSection } from "../../../../components/admin/candidate-detail/detail-section";
 import { CandidateDetailSectionNav } from "../../../../components/admin/candidate-detail/section-nav";
@@ -9,11 +15,14 @@ import { DetailGridItem } from "../../../../components/admin/candidate-detail/de
 import { ParsedResumeSummary } from "../../../../components/admin/candidate-detail/parsed-resume-summary";
 import { StringList } from "../../../../components/admin/candidate-detail/string-list";
 import { getAdminCandidateDetail } from "../../../../lib/admin/candidate-detail";
+import { getNextBestAction } from "../../../../lib/admin/next-best-action";
+import { InterviewNotesPanel } from "../../../../components/admin/candidate-detail/interview-notes-panel";
 import { RecruiterEmailForm } from "../../../../components/admin/candidate-detail/recruiter-email-form";
 import { SlackOnboardingForm } from "../../../../components/admin/candidate-detail/slack-onboarding-form";
 import {
   applyAdminOverrideAction,
   sendRecruiterEmailAction,
+  simulateMockNotetakerAction,
   simulateSlackJoinOnboardingAction,
 } from "./actions";
 import type { RouteParams } from "../../../../types";
@@ -62,6 +71,24 @@ export default async function AdminCandidateDetailPage({
     notFound();
   }
 
+  const statusEnum = detail.currentStatus as ApplicationStatus;
+  const nextBest = getNextBestAction({
+    status: statusEnum,
+    aiScore: detail.aiScore,
+    aiConfidence: detail.aiConfidence,
+    screeningThreshold: detail.screeningThreshold,
+    screeningDecisionPath: detail.screeningDecisionPath,
+  });
+
+  const profileLinks = [
+    detail.candidate.linkedinUrl
+      ? { label: "LinkedIn (application)", href: detail.candidate.linkedinUrl }
+      : null,
+    detail.candidate.portfolioUrl
+      ? { label: "Portfolio (application)", href: detail.candidate.portfolioUrl }
+      : null,
+  ].filter(Boolean) as { label: string; href: string }[];
+
   return (
     <main className="mx-auto min-h-screen max-w-6xl px-6 py-16">
       <div className="space-y-8">
@@ -85,6 +112,27 @@ export default async function AdminCandidateDetailPage({
             <StatusBadge status={detail.currentStatus} />
           </div>
         </div>
+
+        <div className="grid gap-4 lg:grid-cols-2">
+          <WorkflowPipeline currentStatus={statusEnum} />
+          <NextBestActionCard action={nextBest} />
+        </div>
+
+        <AutomationCallout />
+
+        <SchedulingOfferSummary applicationId={detail.applicationId} detail={detail} />
+
+        <section className="rounded-lg border border-slate-200 bg-white p-5">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+            Activity timeline
+          </h2>
+          <p className="mt-1 text-xs text-slate-500">
+            Chronological system and recruiter events — primary audit trail for the pipeline.
+          </p>
+          <div className="mt-4">
+            <ActivityTimeline items={detail.activityLog} />
+          </div>
+        </section>
 
         <dl className="grid gap-4 rounded-lg border border-border bg-white p-6 sm:grid-cols-2 lg:grid-cols-4">
           <DetailGridItem label="Email" value={detail.candidate.email} />
@@ -116,7 +164,11 @@ export default async function AdminCandidateDetailPage({
                 </a>
                 <div className="space-y-3">
                   <h3 className="text-sm font-medium text-slate-900">Parsed resume summary</h3>
-                  <ParsedResumeSummary parsedResumeJson={detail.parsedResumeJson} />
+                  <ParsedResumeSummary
+                    parsedResumeJson={detail.parsedResumeJson}
+                    profileLinks={profileLinks}
+                    parseMeta={detail.parseMeta}
+                  />
                 </div>
                 {detail.parsedResumeJson ? (
                   <div className="space-y-3">
@@ -131,14 +183,46 @@ export default async function AdminCandidateDetailPage({
 
             <CandidateDetailSection id="screening" title="AI Screening">
               <div className="space-y-6">
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <DetailGridItem label="AI screening score" value={detail.aiScore ?? "Pending"} />
+                {detail.screeningDecisionPath ? (
+                  <div className="rounded-md border border-violet-200 bg-violet-50 px-3 py-2 text-sm text-violet-950">
+                    <span className="font-semibold">Routing decision: </span>
+                    <span className="font-mono">
+                      {detail.screeningDecisionPath.replace(/_/g, " ")}
+                    </span>
+                    <span className="text-violet-800">
+                      {" "}
+                      (score + confidence rules — see architecture docs)
+                    </span>
+                  </div>
+                ) : null}
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  <DetailGridItem label="Score" value={detail.aiScore ?? "Pending"} />
+                  <DetailGridItem
+                    label="Confidence"
+                    value={detail.aiConfidence ?? "—"}
+                  />
+                  <DetailGridItem
+                    label="Recommendation"
+                    value={detail.aiRecommendation ?? "—"}
+                  />
+                  <DetailGridItem
+                    label="Legacy threshold (log only)"
+                    value={String(detail.screeningThreshold)}
+                  />
                   <DetailGridItem label="Current status" value={formatStatusLabel(detail.currentStatus)} />
                 </div>
                 <div className="space-y-2">
                   <h3 className="text-sm font-medium text-slate-900">Rationale</h3>
                   <p className="text-sm leading-6 text-slate-700">
                     {detail.aiSummary ?? "No AI rationale has been stored yet."}
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <h3 className="text-sm font-medium text-slate-900">Recruiter takeaway</h3>
+                  <p className="text-sm leading-6 text-slate-700">
+                    {detail.aiSummary
+                      ? "Use score, confidence, strengths, and gaps together — not the score alone."
+                      : "Pending screening output."}
                   </p>
                 </div>
                 <div className="grid gap-6 md:grid-cols-2">
@@ -157,9 +241,29 @@ export default async function AdminCandidateDetailPage({
               </div>
             </CandidateDetailSection>
 
+            <CandidateDetailSection id="interview" title="Interview notes (notetaker)">
+              <InterviewNotesPanel
+                applicationId={detail.applicationId}
+                interviews={detail.interviews}
+                action={simulateMockNotetakerAction}
+              />
+            </CandidateDetailSection>
+
             <CandidateDetailSection id="research" title="Research">
               <p className="text-sm leading-6 text-slate-700">
                 {detail.researchSummary ?? "No research summary is available for this application yet."}
+              </p>
+              <p className="mt-3 text-xs leading-5 text-slate-500">
+                Sources used for synthesis (resume + URLs — not live LinkedIn/X/GitHub scraping):{" "}
+                {detail.researchSourceLinks ? (
+                  <span className="block font-mono text-[11px] text-slate-600">
+                    LinkedIn: {detail.researchSourceLinks.linkedinUrl ?? "—"} · GitHub:{" "}
+                    {detail.researchSourceLinks.githubUrl ?? "—"} · Portfolio:{" "}
+                    {detail.researchSourceLinks.portfolioUrl ?? "—"}
+                  </span>
+                ) : (
+                  " run research after shortlist to populate structured links."
+                )}
               </p>
             </CandidateDetailSection>
 
@@ -188,7 +292,7 @@ export default async function AdminCandidateDetailPage({
               )}
             </CandidateDetailSection>
 
-            <CandidateDetailSection id="activity" title="Activity Log">
+            <CandidateDetailSection id="activity" title="Activity (raw payloads)">
               {detail.activityLog.length === 0 ? (
                 <p className="text-sm text-slate-500">No activity events yet.</p>
               ) : (
