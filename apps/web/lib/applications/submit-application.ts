@@ -62,7 +62,8 @@ export async function submitApplication(input: ApplicationFormInput) {
       return {
         ok: false as const,
         code: "DUPLICATE_APPLICATION" as const,
-        message: "An application already exists for this email address and role.",
+        message:
+          "We already have an application from this email for this role. If you need to update your resume or details, please contact recruiting — duplicate submissions are not accepted.",
       };
     }
   }
@@ -201,7 +202,8 @@ export async function submitApplication(input: ApplicationFormInput) {
       return {
         ok: false as const,
         code: "DUPLICATE_APPLICATION" as const,
-        message: "An application already exists for this email address and role.",
+        message:
+          "We already have an application from this email for this role. If you need to update your resume or details, please contact recruiting — duplicate submissions are not accepted.",
       };
     }
 
