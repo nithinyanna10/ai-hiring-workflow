@@ -29,6 +29,8 @@ const envSchema = z.object({
   SLACK_WELCOME_CHANNEL_ID: optionalNonEmptyString,
   /** Workspace ID for admin.users.invite when using slack_api (enterprise setups). */
   SLACK_TEAM_ID: optionalNonEmptyString,
+  /** Optional: receive `offer.signed` alerts (in addition to in-app activity). */
+  ADMIN_ALERT_EMAIL: z.preprocess(emptyToUndefined, z.string().email().optional()),
 });
 
 export const env = envSchema.parse({
@@ -46,6 +48,7 @@ export const env = envSchema.parse({
   SLACK_HR_CHANNEL_ID: process.env.SLACK_HR_CHANNEL_ID,
   SLACK_WELCOME_CHANNEL_ID: process.env.SLACK_WELCOME_CHANNEL_ID,
   SLACK_TEAM_ID: process.env.SLACK_TEAM_ID,
+  ADMIN_ALERT_EMAIL: process.env.ADMIN_ALERT_EMAIL,
 });
 
 /** Resend when key exists and not explicitly `mock`; otherwise mock. */
