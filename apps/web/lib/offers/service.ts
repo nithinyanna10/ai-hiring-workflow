@@ -197,6 +197,8 @@ export async function getOfferFormDetail(applicationId: string) {
           signatureToken: true,
           signatureProvider: true,
           signatureStatus: true,
+          createdAt: true,
+          updatedAt: true,
         },
       },
     },
