@@ -14,13 +14,14 @@ export default async function AdminCandidatesPage({
   searchParams,
 }: PageSearchParams<{
   role?: string;
+  bucket?: string;
   status?: string;
   dateFrom?: string;
   dateTo?: string;
 }>) {
   const resolvedSearchParams = await searchParams;
   const filters = parseAdminCandidateFilters(resolvedSearchParams);
-  const [{ roleOptions, statusOptions }, applications] = await Promise.all([
+  const [{ roleOptions, bucketOptions, statusOptions }, applications] = await Promise.all([
     getAdminCandidateFilters(),
     getAdminCandidates(filters),
   ]);
@@ -42,6 +43,7 @@ export default async function AdminCandidatesPage({
         <CandidateFilterForm
           filters={filters}
           roleOptions={roleOptions}
+          bucketOptions={bucketOptions}
           statusOptions={statusOptions}
         />
 
