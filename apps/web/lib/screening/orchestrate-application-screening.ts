@@ -10,6 +10,10 @@ import { db } from "../db";
 import { sendScreeningNotificationEmail } from "../email/send-screening-notification";
 import { getEmailProvider } from "../email/provider";
 import { orchestrateCandidateResearch } from "../research/orchestrate-candidate-research";
+import {
+  enrichParsedResumeFromRawText,
+  mergeResumeJsonForStorage,
+} from "../resume/enrich-parsed-resume";
 import { extractResumeText } from "../resume-extraction";
 import { env } from "../env";
 import { getResumeParsingProvider, getResumeScreeningProvider } from "./providers";
@@ -102,8 +106,33 @@ function isScreeningComplete(application: ScreeningApplicationRecord) {
     application.aiStrengthsJson !== null &&
     application.aiGapsJson !== null &&
     (application.currentStatus === ApplicationStatus.SCREENED ||
-      application.currentStatus === ApplicationStatus.SHORTLISTED)
+      application.currentStatus === ApplicationStatus.SHORTLISTED ||
+      application.currentStatus === ApplicationStatus.UNDER_REVIEW)
   );
+}
+
+type ScreeningDecisionPath = "auto_shortlist" | "manual_review_queue" | "screened_only";
+
+function resolveScreeningDecision(
+  score: number,
+  confidenceLevel: ScreeningResult["confidenceLevel"],
+): { finalStatus: ApplicationStatus; decisionPath: ScreeningDecisionPath } {
+  if (score >= 75 && confidenceLevel === "high") {
+    return {
+      finalStatus: ApplicationStatus.SHORTLISTED,
+      decisionPath: "auto_shortlist",
+    };
+  }
+  if (score >= 60 || confidenceLevel === "medium") {
+    return {
+      finalStatus: ApplicationStatus.UNDER_REVIEW,
+      decisionPath: "manual_review_queue",
+    };
+  }
+  return {
+    finalStatus: ApplicationStatus.SCREENED,
+    decisionPath: "screened_only",
+  };
 }
 
 async function fetchApplication(applicationId: string) {
@@ -141,21 +170,21 @@ async function fetchApplication(applicationId: string) {
 
 async function persistScreeningResult(
   application: ScreeningApplicationRecord,
-  parsedResume: StructuredResume,
+  storedResumeJson: Prisma.InputJsonValue,
   screeningResult: ScreeningResult,
-  threshold: number,
+  thresholdForLog: number,
 ) {
   const screenedStatus = ApplicationStatus.SCREENED;
-  const finalStatus =
-    screeningResult.score >= threshold
-      ? ApplicationStatus.SHORTLISTED
-      : ApplicationStatus.SCREENED;
+  const { finalStatus, decisionPath } = resolveScreeningDecision(
+    screeningResult.score,
+    screeningResult.confidenceLevel,
+  );
 
   await db.$transaction(async (tx) => {
     await tx.application.update({
       where: { id: application.id },
       data: {
-        parsedResumeJson: parsedResume,
+        parsedResumeJson: storedResumeJson,
         aiScreenScore: screeningResult.score,
         aiScreenSummary: screeningResult.rationale,
         aiStrengthsJson: screeningResult.strengths,
@@ -172,7 +201,7 @@ async function persistScreeningResult(
         fromStatus: application.currentStatus,
         toStatus: screenedStatus,
         actorType: ActorType.AI_AGENT,
-        note: `Automated screening completed with score ${screeningResult.score}.`,
+        note: `Automated screening completed with score ${screeningResult.score} (confidence: ${screeningResult.confidenceLevel}).`,
       },
     });
 
@@ -184,7 +213,20 @@ async function persistScreeningResult(
           fromStatus: screenedStatus,
           toStatus: finalStatus,
           actorType: ActorType.AI_AGENT,
-          note: `Application met the shortlist threshold of ${threshold}.`,
+          note: "Auto-shortlisted: score ≥ 75 and model confidence high.",
+        },
+      });
+    }
+
+    if (finalStatus === ApplicationStatus.UNDER_REVIEW) {
+      await tx.candidateStatusHistory.create({
+        data: {
+          applicationId: application.id,
+          candidateId: application.candidateId,
+          fromStatus: screenedStatus,
+          toStatus: finalStatus,
+          actorType: ActorType.AI_AGENT,
+          note: "Queued for manual review: score ≥ 60 or medium confidence (per routing rules).",
         },
       });
     }
@@ -196,13 +238,14 @@ async function persistScreeningResult(
         jobId: application.job.id,
         actorType: ActorType.AI_AGENT,
         eventType: "application.screened",
-        note: `Automated screening completed for ${application.job.title}.`,
+        note: `AI screening completed — score ${screeningResult.score}, ${decisionPath.replace(/_/g, " ")}.`,
         payloadJson: {
           score: screeningResult.score,
-          threshold,
+          legacyThresholdSetting: thresholdForLog,
           recommendation: screeningResult.recommendation,
           confidenceLevel: screeningResult.confidenceLevel,
           finalStatus,
+          decisionPath,
         },
       },
     });
@@ -215,10 +258,28 @@ async function persistScreeningResult(
           jobId: application.job.id,
           actorType: ActorType.AI_AGENT,
           eventType: "application.shortlisted",
-          note: `Application was shortlisted by automated screening.`,
+          note: "Application auto-shortlisted (high score + high confidence).",
           payloadJson: {
             score: screeningResult.score,
-            threshold,
+            decisionPath,
+          },
+        },
+      });
+    }
+
+    if (finalStatus === ApplicationStatus.UNDER_REVIEW) {
+      await tx.activityEvent.create({
+        data: {
+          applicationId: application.id,
+          candidateId: application.candidateId,
+          jobId: application.job.id,
+          actorType: ActorType.AI_AGENT,
+          eventType: "application.flagged_for_review",
+          note: "Candidate routed to recruiter review queue based on score/confidence rules.",
+          payloadJson: {
+            score: screeningResult.score,
+            confidenceLevel: screeningResult.confidenceLevel,
+            decisionPath,
           },
         },
       });
@@ -286,10 +347,16 @@ export async function orchestrateApplicationScreening({
       };
     }
 
+    const { resume: enrichedResume, meta: parseMeta } = enrichParsedResumeFromRawText(
+      parsedResume,
+      extractionResult.extractedText,
+    );
+    const storedResumeJson = mergeResumeJsonForStorage(enrichedResume, parseMeta);
+
     let screeningResult: ScreeningResult;
     try {
       screeningResult = await screenResumeWithAI(getResumeScreeningProvider(), {
-        parsedResume,
+        parsedResume: enrichedResume,
         jobDescription: getJobScreeningPrompt(application.job),
       });
     } catch (error) {
@@ -306,7 +373,7 @@ export async function orchestrateApplicationScreening({
 
     const finalStatus = await persistScreeningResult(
       application,
-      parsedResume,
+      storedResumeJson as Prisma.InputJsonValue,
       screeningResult,
       scoreThreshold,
     );
