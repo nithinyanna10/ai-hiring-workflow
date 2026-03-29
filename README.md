@@ -1,6 +1,15 @@
 # AI Hiring Workflow
 
-Production-style monorepo scaffold for an AI-powered hiring workflow application.
+Production-style monorepo for an **end-to-end AI-augmented hiring pipeline** (careers → apply → screening → scheduling → offer → Slack onboarding). Built as a take-home–style prototype: functionality and systems thinking over pixel polish.
+
+### Niural “AI Product Operator” take-home submission
+
+If you are submitting this repo for that assignment, start here:
+
+- **[docs/NIURAL-TAKE-HOME-SUBMISSION.md](./docs/NIURAL-TAKE-HOME-SUBMISSION.md)** — Phase-by-phase coverage vs the brief, deliverable checklist, email subject/recipients, and pointers to architecture / edge cases / trade-offs.
+- Record your **Loom (10–15 min)** using **[docs/loom-script.md](./docs/loom-script.md)** as a guide; paste the link in your submission email.
+
+---
 
 ## Workspace Layout
 
@@ -12,6 +21,14 @@ Production-style monorepo scaffold for an AI-powered hiring workflow application
 - `scripts`: Repository automation placeholders
 
 ## Quick Start
+
+Start Postgres for this repo (dedicated host port **54329**, avoids Docker conflicts with Supabase on **54322**):
+
+```bash
+docker compose up -d
+```
+
+Then:
 
 ```bash
 pnpm install
@@ -26,7 +43,9 @@ Re-run **`pnpm db:seed`** after adding or editing jobs in `apps/web/lib/db/job-s
 
 The web dev server listens on **http://localhost:4730** (not 3000) so it stays clear of common localhost conflicts; keep `NEXT_PUBLIC_APP_URL` in `.env` in sync.
 
-The Prisma datasource is configured for PostgreSQL and is ready to point at Supabase.
+The Prisma datasource targets PostgreSQL. Default `.env.example` matches `docker compose` above; you can point `DATABASE_URL` at any Postgres (including cloud) if you prefer.
+
+If you see **`Database hiring_workflow does not exist`**, Postgres is reachable but that database name is missing on the host/port in `DATABASE_URL`. Start the container (`docker compose up -d`), confirm `DATABASE_URL` uses port **54329** (not an old **54322** URL), then run `pnpm --filter web exec prisma db push` from the repo root.
 
 ## AI Enrichment Notes
 
