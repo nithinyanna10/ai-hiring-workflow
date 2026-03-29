@@ -1,4 +1,4 @@
-import { getEmailProvider } from "./provider";
+import { sendEmail } from "./send-email";
 import { buildApplicationConfirmationEmail } from "./template";
 
 type SendApplicationConfirmationInput = {
@@ -12,13 +12,13 @@ export async function sendApplicationConfirmation({
   candidateName,
   roleTitle,
 }: SendApplicationConfirmationInput) {
-  const provider = getEmailProvider();
   const message = buildApplicationConfirmationEmail({
     candidateName,
     roleTitle,
   });
 
-  const result = await provider.send({
+  const result = await sendEmail({
+    flow: "application_confirmation",
     to: candidateEmail,
     subject: message.subject,
     text: message.text,
