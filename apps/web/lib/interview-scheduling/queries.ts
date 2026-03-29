@@ -37,10 +37,12 @@ export async function getAdminSchedulingDetail(applicationId: string) {
     where: { id: applicationId },
     select: {
       id: true,
+      jobId: true,
       schedulingAccessToken: true,
       currentStatus: true,
       candidate: {
         select: {
+          id: true,
           firstName: true,
           lastName: true,
           email: true,
@@ -123,6 +125,7 @@ export async function getCandidateSchedulingDetail(accessToken: string) {
 
 const SCHEDULING_ELIGIBLE_STATUSES: ApplicationStatus[] = [
   ApplicationStatus.SHORTLISTED,
+  ApplicationStatus.UNDER_REVIEW,
   ApplicationStatus.INTERVIEW_SCHEDULED,
 ];
 
