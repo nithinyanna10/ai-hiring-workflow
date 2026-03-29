@@ -72,9 +72,25 @@ export default async function AdminOfferPage({
             {detail.offer?.offerText ?? "No offer draft has been generated yet."}
           </div>
 
-          <p className="mt-4 text-sm text-slate-500">
-            Signature status: {detail.offer?.signatureStatus ?? "DRAFT"}
-          </p>
+          <dl className="mt-4 grid gap-2 text-sm text-slate-600 sm:grid-cols-2">
+            <div>
+              <dt className="text-slate-500">Last generated / updated</dt>
+              <dd className="font-medium text-slate-800">
+                {detail.offer?.updatedAt
+                  ? new Intl.DateTimeFormat("en-US", {
+                      dateStyle: "medium",
+                      timeStyle: "short",
+                    }).format(detail.offer.updatedAt)
+                  : "—"}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-slate-500">Signature status</dt>
+              <dd className="font-medium text-slate-800">
+                {detail.offer?.signatureStatus ?? "—"}
+              </dd>
+            </div>
+          </dl>
 
           {signatureToken ? (
             <div className="mt-4 border-t border-slate-200 pt-4">
