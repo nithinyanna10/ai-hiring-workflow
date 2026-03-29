@@ -43,6 +43,8 @@ export type AdminCandidateListItem = {
 export type AdminCandidateFilters = {
   role: string;
   status: string;
+  /** Grouped pipeline bucket (overrides single `status` when non-empty). */
+  bucket: string;
   dateFrom: string;
   dateTo: string;
 };
@@ -80,8 +82,48 @@ export type AdminCandidateDetail = {
   parsedResumeJson: unknown;
   aiScore: number | null;
   aiSummary: string | null;
+  /** From latest `application.screened` activity payload (if any). */
+  aiRecommendation: string | null;
+  aiConfidence: string | null;
+  screeningThreshold: number;
+  /** From latest `application.screened` payload (`decisionPath`). */
+  screeningDecisionPath: string | null;
   strengths: string[];
   gaps: string[];
+  schedulingSlots: Array<{
+    startTime: Date;
+    endTime: Date;
+    slotStatus: string;
+    holdExpiresAt: Date | null;
+  }>;
+  offerPreview: {
+    excerpt: string | null;
+    updatedAt: Date | null;
+    signatureStatus: string | null;
+  } | null;
+  /** Post-parse keyword/pattern enrichment (inference), if any. */
+  parseMeta: {
+    enrichmentApplied: boolean;
+    skillsInferred: boolean;
+    companiesInferred: boolean;
+    educationInferred: boolean;
+    parseEnrichmentConfidence: "low" | "medium" | "high";
+  } | null;
+  /** From `ApplicationResearch.sourceLinksJson` — same sources research synthesis used (not live scraping). */
+  researchSourceLinks: {
+    linkedinUrl: string | null;
+    githubUrl: string | null;
+    portfolioUrl: string | null;
+  } | null;
+  interviews: Array<{
+    id: string;
+    transcriptText: string | null;
+    feedbackSummary: string | null;
+    notetakerProvider: string | null;
+    completedAt: Date | null;
+    slotStart: Date;
+    slotEnd: Date;
+  }>;
   candidate: {
     fullName: string;
     email: string;
