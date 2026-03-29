@@ -234,6 +234,10 @@ model Interview {
   interviewerName   String?        @db.VarChar(160)
   interviewerEmail  String?        @db.VarChar(320)
   meetingUrl        String?        @db.VarChar(1000)
+  /** Full transcript when ingested from a notetaker (mock or vendor webhook). */
+  transcriptText    String?        @db.Text
+  /** e.g. mock_fireflies, otter, fathom — set by ingestion path. */
+  notetakerProvider String?        @db.VarChar(80)
   feedbackSummary   String?
   completedAt       DateTime?      @db.Timestamptz(6)
   createdAt         DateTime       @default(now()) @db.Timestamptz(6)
