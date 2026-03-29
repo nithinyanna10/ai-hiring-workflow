@@ -2,8 +2,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { AdminSlotGenerator } from "../../../../../components/interview-scheduling/admin-slot-generator";
+import { SchedulingReminderForm } from "../../../../../components/interview-scheduling/scheduling-reminder-form";
 import { SlotTable } from "../../../../../components/interview-scheduling/slot-table";
-import { generateSlotOffersAction } from "./actions";
+import { generateSlotOffersAction, sendSchedulingReminderAction } from "./actions";
 import {
   canGenerateSchedulingOffers,
   ensureSchedulingAccessToken,
@@ -67,9 +68,20 @@ export default async function AdminCandidateSchedulingPage({
           />
         ) : (
           <section className="rounded-lg border border-dashed border-slate-300 bg-white p-6 text-sm text-slate-600">
-            Slot offers can be generated only for shortlisted or already scheduled applications.
+            Slot offers can be generated for shortlisted applications, manual-review queue, or when
+            interviews are already in progress.
           </section>
         )}
+
+        <section className="rounded-lg border border-border bg-white p-6">
+          <h2 className="text-lg font-semibold tracking-tight">Follow-up nudge</h2>
+          <div className="mt-4">
+            <SchedulingReminderForm
+              applicationId={applicationId}
+              action={sendSchedulingReminderAction}
+            />
+          </div>
+        </section>
 
         <section className="space-y-4">
           <h2 className="text-lg font-semibold tracking-tight">Offered slots</h2>
