@@ -1,6 +1,7 @@
 import { ActorType, ApplicationStatus, SignatureStatus } from "@prisma/client";
 
 import { db } from "../../db";
+import { sendAdminOfferSignedAlertIfConfigured } from "../../email/send-admin-offer-signed-alert";
 import { ONBOARDING_ACTIVITY } from "../../onboarding/constants";
 import { orchestrateSlackWorkspaceInviteAfterOfferSigned } from "../../onboarding/orchestrate-slack-invite";
 import type { OfferSignatureProvider } from "./provider";
@@ -156,11 +157,23 @@ export async function completeOfferSignature(
       id: true,
       applicationId: true,
       signatureStatus: true,
+      title: true,
       application: {
         select: {
           candidateId: true,
           currentStatus: true,
           jobId: true,
+          candidate: {
+            select: {
+              firstName: true,
+              lastName: true,
+            },
+          },
+          job: {
+            select: {
+              title: true,
+            },
+          },
         },
       },
     },
@@ -235,6 +248,17 @@ export async function completeOfferSignature(
       },
     });
   });
+
+  try {
+    await sendAdminOfferSignedAlertIfConfigured({
+      applicationId: offer.applicationId,
+      candidateName:
+        `${offer.application.candidate.firstName} ${offer.application.candidate.lastName}`.trim(),
+      roleTitle: offer.title ?? offer.application.job.title,
+    });
+  } catch {
+    /* alert is best-effort */
+  }
 
   try {
     await orchestrateSlackWorkspaceInviteAfterOfferSigned(offer.applicationId);
