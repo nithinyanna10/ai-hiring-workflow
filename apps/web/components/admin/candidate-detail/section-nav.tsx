@@ -1,6 +1,7 @@
 const sections = [
   { id: "resume", label: "Resume" },
   { id: "screening", label: "AI Screening" },
+  { id: "interview", label: "Interview notes" },
   { id: "research", label: "Research" },
   { id: "history", label: "Status History" },
   { id: "activity", label: "Activity Log" },
