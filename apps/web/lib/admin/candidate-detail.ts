@@ -2,6 +2,8 @@ import { ActorType, ApplicationStatus, Prisma } from "@prisma/client";
 import { z } from "zod";
 
 import { db } from "../db";
+import { env } from "../env";
+import { extractParseMeta } from "../resume/enrich-parsed-resume";
 import type { AdminCandidateDetail } from "../../types";
 
 const adminOverrideSchema = z.object({
@@ -26,6 +28,23 @@ function jsonArrayToStrings(value: Prisma.JsonValue | null) {
   }
 
   return value.filter((item): item is string => typeof item === "string");
+}
+
+function parseResearchSourceLinks(
+  json: Prisma.JsonValue | null | undefined,
+): AdminCandidateDetail["researchSourceLinks"] {
+  if (!json || typeof json !== "object" || Array.isArray(json)) {
+    return null;
+  }
+
+  const o = json as Record<string, unknown>;
+  const str = (k: string) => (typeof o[k] === "string" ? (o[k] as string) : null);
+
+  return {
+    linkedinUrl: str("linkedinUrl"),
+    githubUrl: str("githubUrl"),
+    portfolioUrl: str("portfolioUrl"),
+  };
 }
 
 export async function getAdminCandidateDetail(
@@ -87,12 +106,78 @@ export async function getAdminCandidateDetail(
           createdAt: true,
         },
       },
+      interviewSlots: {
+        orderBy: { startTime: "asc" },
+        take: 16,
+        select: {
+          startTime: true,
+          endTime: true,
+          slotStatus: true,
+          holdExpiresAt: true,
+        },
+      },
+      offer: {
+        select: {
+          offerText: true,
+          updatedAt: true,
+          signatureStatus: true,
+        },
+      },
+      researchProfile: {
+        select: {
+          sourceLinksJson: true,
+        },
+      },
+      interviews: {
+        orderBy: { createdAt: "desc" },
+        take: 8,
+        select: {
+          id: true,
+          transcriptText: true,
+          feedbackSummary: true,
+          notetakerProvider: true,
+          completedAt: true,
+          interviewSlot: {
+            select: {
+              startTime: true,
+              endTime: true,
+            },
+          },
+        },
+      },
     },
   });
 
   if (!application) {
     return null;
   }
+
+  const screenedEvent = application.activityEvents.find(
+    (e) => e.eventType === "application.screened",
+  );
+  const screenedPayload = screenedEvent?.payloadJson as
+    | {
+        recommendation?: string;
+        confidenceLevel?: string;
+        threshold?: number;
+        decisionPath?: string;
+      }
+    | null
+    | undefined;
+
+  const offerText = application.offer?.offerText;
+  const offerPreview =
+    application.offer && (offerText || application.offer.updatedAt)
+      ? {
+          excerpt: offerText
+            ? offerText.length > 600
+              ? `${offerText.slice(0, 600).trim()}…`
+              : offerText
+            : null,
+          updatedAt: application.offer.updatedAt,
+          signatureStatus: application.offer.signatureStatus,
+        }
+      : null;
 
   return {
     applicationId: application.id,
@@ -104,8 +189,30 @@ export async function getAdminCandidateDetail(
     parsedResumeJson: application.parsedResumeJson,
     aiScore: application.aiScreenScore ? Number(application.aiScreenScore) : null,
     aiSummary: application.aiScreenSummary,
+    aiRecommendation: screenedPayload?.recommendation ?? null,
+    aiConfidence: screenedPayload?.confidenceLevel ?? null,
+    screeningThreshold: env.SCREENING_SCORE_THRESHOLD,
+    screeningDecisionPath: screenedPayload?.decisionPath ?? null,
     strengths: jsonArrayToStrings(application.aiStrengthsJson),
     gaps: jsonArrayToStrings(application.aiGapsJson),
+    schedulingSlots: application.interviewSlots.map((s) => ({
+      startTime: s.startTime,
+      endTime: s.endTime,
+      slotStatus: s.slotStatus,
+      holdExpiresAt: s.holdExpiresAt,
+    })),
+    offerPreview,
+    parseMeta: extractParseMeta(application.parsedResumeJson),
+    researchSourceLinks: parseResearchSourceLinks(application.researchProfile?.sourceLinksJson),
+    interviews: application.interviews.map((row) => ({
+      id: row.id,
+      transcriptText: row.transcriptText,
+      feedbackSummary: row.feedbackSummary,
+      notetakerProvider: row.notetakerProvider,
+      completedAt: row.completedAt,
+      slotStart: row.interviewSlot.startTime,
+      slotEnd: row.interviewSlot.endTime,
+    })),
     candidate: {
       fullName: `${application.candidate.firstName} ${application.candidate.lastName}`.trim(),
       email: application.candidate.email,
