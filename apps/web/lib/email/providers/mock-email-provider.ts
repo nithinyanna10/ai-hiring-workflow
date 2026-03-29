@@ -1,17 +1,22 @@
+import { recordMockEmail } from "../mock-email-store";
 import type { EmailProvider, SendEmailInput, SendEmailResult } from "../types";
 
 export class MockEmailProvider implements EmailProvider {
   readonly name = "mock";
 
   async send(input: SendEmailInput): Promise<SendEmailResult> {
-    console.info("[mock-email-provider] sending email", {
-      to: input.to,
-      subject: input.subject,
+    const rec = recordMockEmail(input);
+
+    console.info("[mock-email] EMAIL SENT (preview only — no external delivery)", {
+      flow: rec.flow,
+      to: rec.to,
+      subject: rec.subject,
+      id: rec.id,
     });
 
     return {
       provider: this.name,
-      messageId: `mock-${Date.now()}`,
+      messageId: rec.id,
     };
   }
 }
