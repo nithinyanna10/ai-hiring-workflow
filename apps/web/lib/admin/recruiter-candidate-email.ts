@@ -2,7 +2,7 @@ import { ActorType } from "@prisma/client";
 import { z } from "zod";
 
 import { db } from "../db";
-import { getEmailProvider } from "../email/provider";
+import { sendEmail } from "../email/send-email";
 
 const sendSchema = z.object({
   applicationId: z.string().trim().min(1),
@@ -78,8 +78,8 @@ export async function sendRecruiterEmailToCandidate(
   ].join("");
 
   try {
-    const provider = getEmailProvider();
-    const result = await provider.send({
+    const result = await sendEmail({
+      flow: "recruiter_manual",
       to: application.candidate.email,
       subject,
       text,
