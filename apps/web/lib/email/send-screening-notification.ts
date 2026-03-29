@@ -1,4 +1,4 @@
-import { getEmailProvider } from "./provider";
+import { sendEmail } from "./send-email";
 import { buildScreeningNotificationEmail } from "./template";
 
 type SendScreeningNotificationInput = {
@@ -11,7 +11,6 @@ type SendScreeningNotificationInput = {
 };
 
 export async function sendScreeningNotificationEmail(input: SendScreeningNotificationInput) {
-  const provider = getEmailProvider();
   const message = buildScreeningNotificationEmail({
     candidateName: input.candidateName,
     roleTitle: input.roleTitle,
@@ -20,7 +19,8 @@ export async function sendScreeningNotificationEmail(input: SendScreeningNotific
     shortlisted: input.shortlisted,
   });
 
-  const result = await provider.send({
+  const result = await sendEmail({
+    flow: "screening_notification",
     to: input.candidateEmail,
     subject: message.subject,
     text: message.text,
