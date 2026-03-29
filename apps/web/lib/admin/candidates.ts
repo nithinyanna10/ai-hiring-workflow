@@ -8,9 +8,21 @@ import type {
   AdminCandidateListItem,
 } from "../../types";
 
+const pipelineBucketValues = [
+  "",
+  "applied",
+  "screening",
+  "shortlisted",
+  "interview",
+  "offer",
+  "rejected",
+  "hired",
+] as const;
+
 const candidateFilterSchema = z.object({
   role: z.string().trim().optional().default(""),
   status: z.union([z.literal(""), z.nativeEnum(ApplicationStatus)]).optional().default(""),
+  bucket: z.enum(pipelineBucketValues).optional().default(""),
   dateFrom: z.string().trim().optional().default(""),
   dateTo: z.string().trim().optional().default(""),
 });
@@ -32,17 +44,58 @@ function parseDateBoundary(value: string, boundary: "start" | "end") {
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
+function statusesForPipelineBucket(bucket: string): ApplicationStatus[] | null {
+  switch (bucket) {
+    case "applied":
+      return [ApplicationStatus.APPLIED];
+    case "screening":
+      return [
+        ApplicationStatus.SCREENED,
+        ApplicationStatus.UNDER_REVIEW,
+        ApplicationStatus.PHONE_SCREEN,
+      ];
+    case "shortlisted":
+      return [ApplicationStatus.SHORTLISTED];
+    case "interview":
+      return [ApplicationStatus.INTERVIEW_SCHEDULED, ApplicationStatus.INTERVIEWING];
+    case "offer":
+      return [
+        ApplicationStatus.OFFER_DRAFT,
+        ApplicationStatus.OFFER_SENT,
+        ApplicationStatus.OFFER_SIGNED,
+      ];
+    case "rejected":
+      return [ApplicationStatus.REJECTED, ApplicationStatus.WITHDRAWN];
+    case "hired":
+      return [ApplicationStatus.HIRED, ApplicationStatus.ONBOARDING, ApplicationStatus.ONBOARDED];
+    default:
+      return null;
+  }
+}
+
 export function parseAdminCandidateFilters(
   searchParams: CandidateFilterInput,
 ): AdminCandidateFilters {
-  const parsed = candidateFilterSchema.parse({
+  const raw = {
     role: getSearchParamValue(searchParams.role),
     status: getSearchParamValue(searchParams.status),
+    bucket: getSearchParamValue(searchParams.bucket),
     dateFrom: getSearchParamValue(searchParams.dateFrom),
     dateTo: getSearchParamValue(searchParams.dateTo),
-  });
+  };
 
-  return parsed;
+  const parsed = candidateFilterSchema.safeParse(raw);
+  if (!parsed.success) {
+    return {
+      role: raw.role,
+      status: "",
+      bucket: "",
+      dateFrom: raw.dateFrom,
+      dateTo: raw.dateTo,
+    };
+  }
+
+  return parsed.data;
 }
 
 function buildCandidateWhere(filters: AdminCandidateFilters): Prisma.ApplicationWhereInput {
@@ -58,11 +111,17 @@ function buildCandidateWhere(filters: AdminCandidateFilters): Prisma.Application
     submittedAt.lte = toDate;
   }
 
+  const bucketStatuses = filters.bucket ? statusesForPipelineBucket(filters.bucket) : null;
+  const statusFilter: Prisma.ApplicationWhereInput =
+    bucketStatuses && bucketStatuses.length > 0
+      ? { currentStatus: { in: bucketStatuses } }
+      : filters.status
+        ? { currentStatus: filters.status as ApplicationStatus }
+        : {};
+
   return {
     ...(filters.role ? { job: { slug: filters.role } } : {}),
-    ...(filters.status
-      ? { currentStatus: filters.status as ApplicationStatus }
-      : {}),
+    ...statusFilter,
     ...(fromDate || toDate ? { submittedAt } : {}),
   };
 }
@@ -94,9 +153,21 @@ export async function getAdminCandidateFilters() {
     }),
   );
 
+  const bucketOptions: AdminCandidateFilterOption[] = [
+    { value: "", label: "All stages" },
+    { value: "applied", label: "Applied" },
+    { value: "screening", label: "Screening / review" },
+    { value: "shortlisted", label: "Shortlisted" },
+    { value: "interview", label: "In interview" },
+    { value: "offer", label: "Offer" },
+    { value: "rejected", label: "Rejected / withdrawn" },
+    { value: "hired", label: "Hired / onboarding" },
+  ];
+
   return {
     roleOptions,
     statusOptions,
+    bucketOptions,
   };
 }
 
