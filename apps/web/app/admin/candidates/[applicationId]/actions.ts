@@ -7,6 +7,10 @@ import {
   type AdminOverrideState,
 } from "../../../../lib/admin/candidate-detail";
 import { sendRecruiterEmailToCandidate } from "../../../../lib/admin/recruiter-candidate-email";
+import type {
+  MockNotetakerFormState,
+} from "../../../../components/admin/candidate-detail/interview-notes-panel";
+import { attachMockNotetakerToLatestInterview } from "../../../../lib/interview/attach-mock-notetaker";
 import { completeSlackOnboardingWelcome } from "../../../../lib/onboarding/complete-slack-welcome";
 import type { RecruiterEmailFormState } from "../../../../components/admin/candidate-detail/recruiter-email-form";
 import type { SlackOnboardingSimulateState } from "../../../../components/admin/candidate-detail/slack-onboarding-form";
@@ -94,4 +98,22 @@ export async function sendRecruiterEmailAction(
   }
 
   return { successMessage: "Email sent to the candidate." };
+}
+
+export async function simulateMockNotetakerAction(
+  _previousState: MockNotetakerFormState,
+  formData: FormData,
+): Promise<MockNotetakerFormState> {
+  const applicationId = getStringValue(formData.get("applicationId"));
+
+  const result = await attachMockNotetakerToLatestInterview(applicationId);
+
+  revalidatePath(`/admin/candidates/${applicationId}`);
+  revalidatePath("/admin/candidates");
+
+  if (!result.ok) {
+    return { errorMessage: result.error };
+  }
+
+  return { successMessage: "Mock transcript and summary attached to the latest interview." };
 }
