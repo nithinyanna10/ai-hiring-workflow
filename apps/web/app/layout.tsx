@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import "./globals.css";
 
+import { DevMockEmailMount } from "../components/dev/dev-mock-email-mount";
+
 export const metadata: Metadata = {
   title: "AI Hiring Workflow",
   description: "Operational scaffold for hiring workflows powered by AI services.",
@@ -11,7 +13,10 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        {children}
+        <DevMockEmailMount />
+      </body>
     </html>
   );
 }
