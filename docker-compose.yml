@@ -1,0 +1,22 @@
+# Dedicated Postgres for this app only. Host port 54329 avoids clashes with
+# Supabase local stacks (often 54321–54324) and a stopped `hiring-pg` on 54322.
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: hiring-workflow-pg
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: hiring_workflow
+    ports:
+      - "54329:5432"
+    volumes:
+      - hiring_workflow_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d hiring_workflow"]
+      interval: 3s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  hiring_workflow_pgdata:
